@@ -2,14 +2,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Send, Plus, User, Bot, Menu, Settings, Plane, Sparkles } from 'lucide-react';
+import { Send, Plus, User, Bot, Menu, Settings, Plane, Sparkles, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import { aiService } from '@/api/aiService';
 import { MessageAnimation, FloatingTravelIcons, PlaneAnimation } from '@/components/animations/GSAPAnimations';
 import { EnhancedSidebar } from './EnhancedSidebar';
+import { MissingParamPrompt } from './MissingParamPrompt';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Input } from '@/components/ui/input';
 
 interface Message {
   id: string;
@@ -58,6 +60,9 @@ Let's create something amazing together! 🚀`,
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [missingParams, setMissingParams] = useState<string[]>([]);
+  const [partialData, setPartialData] = useState<any>({});
+  const [isCollectingParams, setIsCollectingParams] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -90,6 +95,215 @@ Let's create something amazing together! 🚀`,
     }
   }, [chatSessions.length, dispatch, chatSessions]);
 
+  const handleParamProvided = async (param: string, value: string) => {
+    console.log(`Parameter provided: ${param} = ${value}`);
+    
+    // Validate the provided value
+    let isValid = true;
+    let errorMessage = '';
+    
+    if (param === 'budget') {
+      const budget = parseInt(value.replace(/[^\d]/g, ''));
+      if (isNaN(budget) || budget < 1000 || budget > 1000000) {
+        isValid = false;
+        errorMessage = 'Please provide a valid budget between ₹1,000 and ₹10,00,000';
+      }
+    } else if (param === 'members') {
+      const members = parseInt(value.replace(/[^\d]/g, ''));
+      if (isNaN(members) || members < 1 || members > 20) {
+        isValid = false;
+        errorMessage = 'Please provide a valid number of travelers between 1 and 20';
+      }
+    } else if (param === 'source' || param === 'destination') {
+      if (value.trim().length < 2) {
+        isValid = false;
+        errorMessage = `Please provide a valid ${param === 'source' ? 'starting location' : 'destination'}`;
+      }
+      // Check for generic terms
+      const genericTerms = ['the', 'and', 'or', 'to', 'from', 'in', 'at', 'on'];
+      if (genericTerms.includes(value.trim().toLowerCase())) {
+        isValid = false;
+        errorMessage = `Please provide a specific ${param === 'source' ? 'city or location' : 'destination'}, not a generic word`;
+      }
+    }
+    
+    if (!isValid) {
+      // Show error message
+      const errorMsg: Message = {
+        id: Date.now().toString(),
+        type: 'ai',
+        content: `❌ **${errorMessage}**
+
+Please try again with a valid value.`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMsg]);
+      return;
+    }
+    
+    // Update partial data
+    let updatedValue = value;
+    if (param === 'budget') {
+      updatedValue = value.replace(/[^\d]/g, '');
+    } else if (param === 'members') {
+      updatedValue = value.replace(/[^\d]/g, '');
+    }
+    
+    setPartialData(prev => ({
+      ...prev,
+      [param]: updatedValue
+    }));
+    
+    // Remove the parameter from missing params
+    setMissingParams(prev => prev.filter(p => p !== param));
+    
+    // Show confirmation message
+    const confirmationMsg: Message = {
+      id: Date.now().toString(),
+      type: 'ai',
+      content: `✅ **Great!** I've got your ${param === 'source' ? 'starting location' : 
+        param === 'destination' ? 'destination' : 
+        param === 'budget' ? 'budget' : 'number of travelers'}: **${value}**
+
+${missingParams.length > 1 ? `Just ${missingParams.length - 1} more to go!` : 'Almost there!'}`,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, confirmationMsg]);
+    
+    // Check if we have all parameters now
+    if (missingParams.length === 1) { // This was the last one
+      // Show completion message
+      setTimeout(() => {
+        const completionMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content: `🎉 **Perfect!** I now have all the details I need to plan your trip:
+
+📍 **From:** ${partialData.source || 'Not specified'}
+🏖️ **To:** ${partialData.destination || 'Not specified'}
+💰 **Budget:** ₹${(partialData.budget || 0).toLocaleString()}
+👥 **Travelers:** ${partialData.members || 1}
+
+Let me analyze your preferences and find the best travel options for you!`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, completionMsg]);
+        
+        // Close the parameter collection
+        setIsCollectingParams(false);
+        setMissingParams([]);
+        
+        // Create the trip
+        if (partialData.source && partialData.destination) {
+          const newTrip = {
+            id: Date.now().toString(),
+            source: partialData.source,
+            destination: partialData.destination,
+            budget: parseInt(partialData.budget) || 50000,
+            members: parseInt(partialData.members) || 1,
+            departureDate: '',
+            returnDate: '',
+            status: 'planning' as const
+          };
+          
+          dispatch({ type: 'SET_CURRENT_TRIP', payload: newTrip });
+          
+          // Show next steps
+          setTimeout(() => {
+            const nextStepsMsg: Message = {
+              id: (Date.now() + 2).toString(),
+              type: 'system',
+              content: 'Ready to explore your travel options?',
+              timestamp: new Date(),
+              data: { action: 'show_transport', trip: newTrip }
+            };
+            setMessages(prev => [...prev, nextStepsMsg]);
+          }, 2000);
+        }
+      }, 1000);
+    }
+  };
+
+  const handleParamsComplete = async () => {
+    console.log('All parameters collected:', partialData);
+    setIsCollectingParams(false);
+    
+    // Create trip with collected data
+    const newTrip = {
+      id: Date.now().toString(),
+      source: partialData.source || 'Unknown',
+      destination: partialData.destination || 'Unknown',
+      budget: partialData.budget || 50000,
+      members: partialData.members || 1,
+      departureDate: '',
+      returnDate: '',
+      status: 'planning' as const
+    };
+    
+    dispatch({ type: 'SET_CURRENT_TRIP', payload: newTrip });
+
+    // Update chat session with trip info
+    if (activeChat) {
+      dispatch({
+        type: 'UPDATE_CHAT_SESSION',
+        payload: {
+          id: activeChat.id,
+          updates: {
+            title: `Trip to ${newTrip.destination}`,
+            tripId: newTrip.id
+          }
+        }
+      });
+    }
+
+    // Show trip analysis message
+    const analysisMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      type: 'system',
+      content: `## 🎯 Trip Analysis Complete!
+
+**Trip Details:**
+📍 **From:** ${newTrip.source}
+🏖️ **To:** ${newTrip.destination}
+💰 **Budget:** ₹${newTrip.budget.toLocaleString()}
+👥 **Travelers:** ${newTrip.members}
+
+I've analyzed your preferences and found excellent options for your journey!`,
+      timestamp: new Date(),
+      data: newTrip
+    };
+    setMessages(prev => [...prev, analysisMessage]);
+
+    // Generate AI response
+    const aiResponse = await aiService.chatResponse(
+      `Plan a trip from ${newTrip.source} to ${newTrip.destination} with ${newTrip.members} people and ₹${newTrip.budget} budget`,
+      newTrip
+    );
+    
+    const aiMessage: Message = {
+      id: (Date.now() + 2).toString(),
+      type: 'ai',
+      content: aiResponse,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, aiMessage]);
+
+    // Show action buttons
+    setTimeout(() => {
+      const actionMessage: Message = {
+        id: (Date.now() + 3).toString(),
+        type: 'system',
+        content: 'Ready to explore your travel options?',
+        timestamp: new Date(),
+        data: { action: 'show_transport', trip: newTrip }
+      };
+      setMessages(prev => [...prev, actionMessage]);
+    }, 1000);
+
+    // Clear partial data
+    setPartialData({});
+  };
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
@@ -104,53 +318,85 @@ Let's create something amazing together! 🚀`,
     setInputValue('');
     setIsLoading(true);
 
-    // Update chat session with new message
-    if (activeChat) {
-      const currentMessageCount = activeChat.messageCount;
-      dispatch({
-        type: 'UPDATE_CHAT_SESSION',
-        payload: {
-          id: activeChat.id,
-          updates: {
-            lastMessage: inputValue,
-            timestamp: new Date(),
-            messageCount: currentMessageCount + 1
-          }
-        }
-      });
-    }
-
     try {
       // Parse the travel prompt
       const parsedData = await aiService.parseTravelPrompt(inputValue);
       
-              // If we have valid travel data, create a trip
-        if (parsedData.source && parsedData.destination) {
-          const newTrip = {
-            id: Date.now().toString(),
-            source: parsedData.source,
-            destination: parsedData.destination,
-            budget: parsedData.budget || 50000,
-            members: parsedData.members || 1,
-            departureDate: '',
-            returnDate: '',
-            status: 'planning' as const
-          };
-          dispatch({ type: 'SET_CURRENT_TRIP', payload: newTrip });
-
-          // Update chat session with trip info
-          if (activeChat) {
-            dispatch({
-              type: 'UPDATE_CHAT_SESSION',
-              payload: {
-                id: activeChat.id,
-                updates: {
-                  title: `Trip to ${parsedData.destination}`,
-                  tripId: newTrip.id
-                }
-              }
-            });
+      // Check if we have missing parameters
+      if (parsedData.missingParams && parsedData.missingParams.length > 0) {
+        console.log('Missing parameters detected:', parsedData.missingParams);
+        
+        // Set up missing parameter collection
+        setMissingParams(parsedData.missingParams);
+        setPartialData(parsedData);
+        setIsCollectingParams(true);
+        
+        // Generate missing parameter prompt
+        const missingParamPrompt = await aiService.generateMissingParamPrompt(
+          parsedData.missingParams, 
+          parsedData
+        );
+        
+        const missingParamMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content: missingParamPrompt,
+          timestamp: new Date(),
+          data: { 
+            type: 'missing_params',
+            missingParams: parsedData.missingParams,
+            partialData: parsedData
           }
+        };
+        
+        setMessages(prev => [...prev, missingParamMessage]);
+        
+        // Update chat session
+        if (activeChat) {
+          const currentMessageCount = activeChat.messageCount;
+          dispatch({
+            type: 'UPDATE_CHAT_SESSION',
+            payload: {
+              id: activeChat.id,
+              updates: {
+                lastMessage: `Collecting missing travel details (${parsedData.missingParams.length} remaining)`,
+                timestamp: new Date(),
+                messageCount: currentMessageCount + 2
+              }
+            }
+          });
+        }
+        
+        return; // Don't proceed with trip creation
+      }
+
+      // If we have valid travel data, create a trip
+      if (parsedData.source && parsedData.destination) {
+        const newTrip = {
+          id: Date.now().toString(),
+          source: parsedData.source,
+          destination: parsedData.destination,
+          budget: parsedData.budget || 50000,
+          members: parsedData.members || 1,
+          departureDate: '',
+          returnDate: '',
+          status: 'planning' as const
+        };
+        dispatch({ type: 'SET_CURRENT_TRIP', payload: newTrip });
+
+        // Update chat session with trip info
+        if (activeChat) {
+          dispatch({
+            type: 'UPDATE_CHAT_SESSION',
+            payload: {
+              id: activeChat.id,
+              updates: {
+                title: `Trip to ${parsedData.destination}`,
+                tripId: newTrip.id
+              }
+            }
+          });
+        }
 
         // Show trip analysis message
         const analysisMessage: Message = {
@@ -161,8 +407,8 @@ Let's create something amazing together! 🚀`,
 **Trip Details:**
 📍 **From:** ${parsedData.source}
 🏖️ **To:** ${parsedData.destination}
-💰 **Budget:** ₹${parsedData.budget?.toLocaleString()}
-👥 **Travelers:** ${parsedData.members}
+💰 **Budget:** ₹${parsedData.budget?.toLocaleString() || '50,000'}
+👥 **Travelers:** ${parsedData.members || 1}
 
 I've analyzed your preferences and found excellent options for your journey!`,
           timestamp: new Date(),
@@ -180,22 +426,6 @@ I've analyzed your preferences and found excellent options for your journey!`,
         };
         setMessages(prev => [...prev, aiMessage]);
 
-        // Update chat session with AI response
-        if (activeChat) {
-          const currentMessageCount = activeChat.messageCount;
-          dispatch({
-            type: 'UPDATE_CHAT_SESSION',
-            payload: {
-              id: activeChat.id,
-              updates: {
-                lastMessage: aiResponse.substring(0, 50) + (aiResponse.length > 50 ? '...' : ''),
-                timestamp: new Date(),
-                messageCount: currentMessageCount + 3 // user + ai + system messages
-              }
-            }
-          });
-        }
-
         // Show action buttons
         setTimeout(() => {
           const actionMessage: Message = {
@@ -206,46 +436,49 @@ I've analyzed your preferences and found excellent options for your journey!`,
             data: { action: 'show_transport', trip: newTrip }
           };
           setMessages(prev => [...prev, actionMessage]);
-          
-          // Update chat session with system message
-          if (activeChat) {
-            const currentMessageCount = activeChat.messageCount;
-            dispatch({
-              type: 'UPDATE_CHAT_SESSION',
-              payload: {
-                id: activeChat.id,
-                updates: {
-                  lastMessage: 'Ready to explore your travel options?',
-                  timestamp: new Date(),
-                  messageCount: currentMessageCount + 4 // user + ai + system + action messages
-                }
-              }
-            });
-          }
         }, 1000);
 
-      } else {
-        // Regular chat response
-        const aiResponse = await aiService.chatResponse(inputValue);
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          type: 'ai',
-          content: aiResponse,
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, aiMessage]);
-        
-        // Update chat session with AI response
+        // Update chat session
         if (activeChat) {
-          const currentMessageCount = activeChat.messageCount;
           dispatch({
             type: 'UPDATE_CHAT_SESSION',
             payload: {
               id: activeChat.id,
               updates: {
-                lastMessage: aiResponse.substring(0, 50) + (aiResponse.length > 50 ? '...' : ''),
+                lastMessage: `Trip planned to ${parsedData.destination}`,
                 timestamp: new Date(),
-                messageCount: currentMessageCount + 2 // user + ai messages
+                messageCount: activeChat.messageCount + 3
+              }
+            }
+          });
+        }
+      } else {
+        // If we don't have basic travel info, provide a helpful response
+        const helpMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content: `I'd love to help you plan your trip! Please tell me:
+
+📍 **Where you're traveling from** (e.g., "I'm in Chennai")
+🏖️ **Where you want to go** (e.g., "I want to visit Dubai")
+💰 **Your budget** (e.g., "₹50,000")
+👥 **How many people** (e.g., "We are 4 people")
+
+You can tell me everything at once: *"Plan a trip from Chennai to Dubai with 4 people and ₹50,000 budget"*`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, helpMessage]);
+        
+        // Update chat session
+        if (activeChat) {
+          dispatch({
+            type: 'UPDATE_CHAT_SESSION',
+            payload: {
+              id: activeChat.id,
+              updates: {
+                lastMessage: 'Asked for travel details',
+                timestamp: new Date(),
+                messageCount: activeChat.messageCount + 2
               }
             }
           });
@@ -447,6 +680,18 @@ I've analyzed your preferences and found excellent options for your journey!`,
         <div className="flex-1 overflow-auto p-6 space-y-1">
           {messages.map((message, index) => renderMessage(message, index))}
           
+          {/* Missing Parameter Collection */}
+          {isCollectingParams && missingParams.length > 0 && (
+            <div className="mb-6">
+              <MissingParamPrompt
+                missingParams={missingParams}
+                partialData={partialData}
+                onParamProvided={handleParamProvided}
+                onComplete={handleParamsComplete}
+              />
+            </div>
+          )}
+          
           {isLoading && (
             <MessageAnimation>
               <div className="flex items-center space-x-3 text-muted-foreground">
@@ -467,35 +712,44 @@ I've analyzed your preferences and found excellent options for your journey!`,
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
-        <div className="border-t border-border/20 bg-card/30 backdrop-blur-md p-4 sticky bottom-0 z-20">
-          <div className="max-w-4xl mx-auto">
-            <div className="relative">
-              <textarea
-                ref={inputRef}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Tell me about your dream destination... (e.g., 'Plan a trip for 4 people from Chennai to Dubai with ₹50,000 budget')"
-                className="w-full min-h-[60px] max-h-32 p-4 pr-16 bg-background/50 backdrop-blur-sm border border-border/30 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 placeholder:text-muted-foreground"
-                disabled={isLoading}
-                rows={1}
-              />
-              <div className="absolute right-2 bottom-2 flex items-center space-x-2">
-                <Button
-                  size="icon"
-                  onClick={handleSendMessage}
-                  disabled={!inputValue.trim() || isLoading}
-                  className="h-10 w-10 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 disabled:opacity-50"
-                >
-                  <Send className="h-4 w-4 text-white" />
-                </Button>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              💡 Pro tip: Be specific about destinations, dates, budget, and group size for personalized recommendations
-            </p>
+        {/* Main input area */}
+        <div className="flex items-center space-x-3 p-4 bg-white border-t border-gray-200">
+          <div className="flex-1 relative">
+            <Input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Tell me about your travel plans... (e.g., 'I want to go from Chennai to Dubai with 4 people and ₹50,000 budget')"
+              className="pr-12 text-sm"
+              disabled={isLoading}
+            />
+            {inputValue && (
+              <button
+                onClick={() => setInputValue('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
+          <Button
+            onClick={handleSendMessage}
+            disabled={!inputValue.trim() || isLoading}
+            className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300"
+          >
+            {isLoading ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+          </Button>
+        </div>
+
+        {/* Pro tip */}
+        <div className="px-4 py-2 bg-blue-50 border-t border-blue-100">
+          <p className="text-xs text-blue-700 text-center">
+            💡 <strong>Pro tip:</strong> You can tell me everything at once! Try: "Plan a trip from Mumbai to London with 2 people and ₹2 lakh budget"
+          </p>
         </div>
       </div>
     </div>

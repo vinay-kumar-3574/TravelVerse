@@ -169,44 +169,229 @@ Based on your budget, I can suggest several cost-effective options that don't co
   async parseTravelPrompt(prompt: string) {
     console.log('🤖 AI: Parsing travel prompt:', prompt);
     
-    // Mock intelligent parsing
+    // Enhanced parsing with better pattern matching
     const parsed = {
-      source: this.extractLocation(prompt, ['from', 'starting', 'leaving']),
-      destination: this.extractLocation(prompt, ['to', 'going', 'visiting']),
+      source: this.extractSource(prompt),
+      destination: this.extractDestination(prompt),
       budget: this.extractBudget(prompt),
       members: this.extractMembers(prompt),
       dates: this.extractDates(prompt),
-      preferences: this.extractPreferences(prompt)
+      preferences: this.extractPreferences(prompt),
+      missingParams: [] as string[]
     };
+
+    // Check for missing required parameters with better validation
+    if (!parsed.source || parsed.source.trim() === '') {
+      parsed.missingParams.push('source');
+    }
+    if (!parsed.destination || parsed.destination.trim() === '') {
+      parsed.missingParams.push('destination');
+    }
+    if (!parsed.budget || parsed.budget <= 0) {
+      parsed.missingParams.push('budget');
+    }
+    if (!parsed.members || parsed.members <= 0) {
+      parsed.missingParams.push('members');
+    }
 
     console.log('🧠 AI Parsed:', parsed);
     return parsed;
   }
 
-  private extractLocation(prompt: string, keywords: string[]): string {
-    const cities = ['Chennai', 'Dubai', 'Mumbai', 'Delhi', 'Bangalore', 'London', 'Paris', 'New York', 'Tokyo', 'Singapore'];
-    for (const city of cities) {
-      if (prompt.toLowerCase().includes(city.toLowerCase())) {
-        return city;
+  private extractSource(prompt: string): string {
+    // Enhanced source patterns with more natural language support
+    const sourcePatterns = [
+      /from\s+([A-Za-z\s]+?)(?:\s+to|\s+with|\s+for|\s+₹|\s+\d+)/i,
+      /leaving\s+([A-Za-z\s]+?)(?:\s+to|\s+with|\s+for|\s+₹|\s+\d+)/i,
+      /starting\s+from\s+([A-Za-z\s]+?)(?:\s+to|\s+with|\s+for|\s+₹|\s+\d+)/i,
+      /departing\s+from\s+([A-Za-z\s]+?)(?:\s+to|\s+with|\s+for|\s+₹|\s+\d+)/i,
+      /I\s+(?:am\s+)?(?:in|at)\s+([A-Za-z\s]+?)(?:\s+and|\s+want|\s+planning|\s+thinking)/i,
+      /currently\s+in\s+([A-Za-z\s]+?)(?:\s+and|\s+want|\s+planning|\s+thinking)/i
+    ];
+
+    for (const pattern of sourcePatterns) {
+      const match = prompt.match(pattern);
+      if (match) {
+        const source = match[1].trim();
+        // Validate that it's not just a common word
+        if (source.length > 2 && !['the', 'and', 'or', 'but', 'for', 'with'].includes(source.toLowerCase())) {
+          return source;
+        }
       }
     }
+
+    // Fallback: look for city names in the first part of the sentence
+    const cities = ['Chennai', 'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Kolkata', 'Pune', 'Ahmedabad', 'Jaipur', 'Surat', 'London', 'Paris', 'New York', 'Tokyo', 'Singapore', 'Dubai', 'Bangkok', 'Sydney', 'Toronto', 'Berlin', 'Amsterdam', 'Rome', 'Madrid', 'Vienna', 'Prague', 'Budapest', 'Warsaw', 'Stockholm', 'Oslo', 'Copenhagen', 'Helsinki'];
+    const words = prompt.split(/\s+/);
+    
+    for (let i = 0; i < Math.min(8, words.length); i++) {
+      for (const city of cities) {
+        if (words[i].toLowerCase().includes(city.toLowerCase()) || city.toLowerCase().includes(words[i].toLowerCase())) {
+          return city;
+        }
+      }
+    }
+
+    return '';
+  }
+
+  private extractDestination(prompt: string): string {
+    // Enhanced destination patterns with more natural language support
+    const destinationPatterns = [
+      /to\s+([A-Za-z\s]+?)(?:\s+with|\s+for|\s+₹|\s+\d+)/i,
+      /going\s+to\s+([A-Za-z\s]+?)(?:\s+with|\s+for|\s+₹|\s+\d+)/i,
+      /visiting\s+([A-Za-z\s]+?)(?:\s+with|\s+for|\s+₹|\s+\d+)/i,
+      /travelling\s+to\s+([A-Za-z\s]+?)(?:\s+with|\s+for|\s+₹|\s+\d+)/i,
+      /want\s+to\s+go\s+to\s+([A-Za-z\s]+?)(?:\s+with|\s+for|\s+₹|\s+\d+)/i,
+      /planning\s+to\s+visit\s+([A-Za-z\s]+?)(?:\s+with|\s+for|\s+₹|\s+\d+)/i,
+      /dream\s+destination\s+([A-Za-z\s]+?)(?:\s+with|\s+for|\s+₹|\s+\d+)/i
+    ];
+
+    for (const pattern of destinationPatterns) {
+      const match = prompt.match(pattern);
+      if (match) {
+        const destination = match[1].trim();
+        // Validate that it's not just a common word
+        if (destination.length > 2 && !['the', 'and', 'or', 'but', 'for', 'with'].includes(destination.toLowerCase())) {
+          return destination;
+        }
+      }
+    }
+
+    // Fallback: look for city names after "to" or similar words
+    const cities = ['Chennai', 'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Kolkata', 'Pune', 'Ahmedabad', 'Jaipur', 'Surat', 'London', 'Paris', 'New York', 'Tokyo', 'Singapore', 'Dubai', 'Bangkok', 'Sydney', 'Toronto', 'Berlin', 'Amsterdam', 'Rome', 'Madrid', 'Vienna', 'Prague', 'Budapest', 'Warsaw', 'Stockholm', 'Oslo', 'Copenhagen', 'Helsinki'];
+    const words = prompt.split(/\s+/);
+    
+    for (let i = 0; i < words.length - 1; i++) {
+      if (['to', 'going', 'visiting', 'visit', 'see', 'explore'].includes(words[i].toLowerCase())) {
+        for (const city of cities) {
+          if (words[i + 1].toLowerCase().includes(city.toLowerCase()) || city.toLowerCase().includes(words[i + 1].toLowerCase())) {
+            return city;
+          }
+        }
+      }
+    }
+
     return '';
   }
 
   private extractBudget(prompt: string): number {
-    const budgetMatch = prompt.match(/(\d+(?:,\d+)*)\s*(INR|USD|EUR)/i);
-    if (budgetMatch) {
-      return parseInt(budgetMatch[1].replace(',', ''));
+    // Enhanced budget extraction with multiple patterns and better validation
+    const budgetPatterns = [
+      /₹\s*(\d+(?:,\d+)*)/i,
+      /(\d+(?:,\d+)*)\s*₹/i,
+      /(\d+(?:,\d+)*)\s*(?:rupees?|rs|inr)/i,
+      /budget\s+(?:of\s+)?(?:₹\s*)?(\d+(?:,\d+)*)/i,
+      /with\s+(?:₹\s*)?(\d+(?:,\d+)*)\s*(?:budget|rupees?|rs|inr)/i,
+      /(\d+(?:,\d+)*)\s*(?:budget|rupees?|rs|inr)/i,
+      /around\s+(?:₹\s*)?(\d+(?:,\d+)*)/i,
+      /approximately\s+(?:₹\s*)?(\d+(?:,\d+)*)/i,
+      /about\s+(?:₹\s*)?(\d+(?:,\d+)*)/i,
+      /(\d+(?:,\d+)*)\s*(?:k|thousand)/i,
+      /(\d+)\s*k\s*(?:rupees?|rs|inr)/i
+    ];
+
+    for (const pattern of budgetPatterns) {
+      const match = prompt.match(pattern);
+      if (match) {
+        let budget = match[1].replace(/,/g, '');
+        // Handle 'k' notation (e.g., 50k = 50,000)
+        if (budget.includes('k') || budget.includes('K')) {
+          budget = budget.replace(/[kK]/g, '000');
+        }
+        const parsedBudget = parseInt(budget);
+        if (parsedBudget >= 1000 && parsedBudget <= 1000000) {
+          return parsedBudget;
+        }
+      }
     }
+
+    // Look for numbers that could be budget (usually larger numbers)
+    const numberMatches = prompt.match(/(\d{4,})/g);
+    if (numberMatches) {
+      // Filter out years and other non-budget numbers
+      const potentialBudgets = numberMatches
+        .map(num => parseInt(num))
+        .filter(num => num >= 1000 && num <= 1000000); // Reasonable budget range
+      
+      if (potentialBudgets.length > 0) {
+        // Return the largest potential budget, but validate it's reasonable
+        const maxBudget = Math.max(...potentialBudgets);
+        if (maxBudget >= 5000) { // Minimum reasonable budget
+          return maxBudget;
+        }
+      }
+    }
+
     return 0;
   }
 
   private extractMembers(prompt: string): number {
-    const memberMatch = prompt.match(/(\d+)\s*people/i);
-    if (memberMatch) {
-      return parseInt(memberMatch[1]);
+    // Enhanced member extraction with multiple patterns and better validation
+    const memberPatterns = [
+      /(\d+)\s*(?:people?|persons?|travelers?|members?|guests?|adults?|kids?|children)/i,
+      /for\s+(\d+)\s*(?:people?|persons?|travelers?|members?|guests?|adults?|kids?|children)/i,
+      /with\s+(\d+)\s*(?:people?|persons?|travelers?|members?|guests?|adults?|kids?|children)/i,
+      /(\d+)\s*(?:people?|persons?|travelers?|members?|guests?|adults?|kids?|children)\s+(?:are|will|want|planning|going)/i,
+      /group\s+of\s+(\d+)/i,
+      /(\d+)\s*travelers?/i,
+      /(\d+)\s*of\s+us/i,
+      /we\s+are\s+(\d+)/i,
+      /(\d+)\s*person\s+group/i,
+      /family\s+of\s+(\d+)/i
+    ];
+
+    for (const pattern of memberPatterns) {
+      const match = prompt.match(pattern);
+      if (match) {
+        const members = parseInt(match[1]);
+        if (members >= 1 && members <= 20) { // Reasonable group size
+          return members;
+        }
+      }
     }
-    return 1;
+
+    // Look for natural language indicators of group travel
+    const groupIndicators = [
+      /we\s+want\s+to\s+go/i,
+      /we\s+are\s+planning/i,
+      /we\s+are\s+thinking/i,
+      /we\s+would\s+like/i,
+      /our\s+family/i,
+      /our\s+group/i,
+      /my\s+family/i,
+      /my\s+friends/i,
+      /with\s+my\s+family/i,
+      /with\s+my\s+friends/i,
+      /together\s+with/i,
+      /along\s+with/i
+    ];
+
+    for (const indicator of groupIndicators) {
+      if (indicator.test(prompt)) {
+        // Default to 2 for group indicators (minimum group size)
+        return 2;
+      }
+    }
+
+    // Look for numbers that could be member count (usually small numbers)
+    const numberMatches = prompt.match(/(\d{1,2})/g);
+    if (numberMatches) {
+      const potentialMembers = numberMatches
+        .map(num => parseInt(num))
+        .filter(num => num >= 1 && num <= 20); // Reasonable group size
+      
+      if (potentialMembers.length > 0) {
+        // If multiple numbers found, prefer the one that's not a budget
+        const nonBudgetNumbers = potentialMembers.filter(num => num < 1000);
+        if (nonBudgetNumbers.length > 0) {
+          return nonBudgetNumbers[0];
+        }
+        return potentialMembers[0];
+      }
+    }
+
+    return 0; // Changed from 1 to 0 to properly detect missing members
   }
 
   private extractDates(prompt: string): { departure?: string; return?: string } {
@@ -460,6 +645,55 @@ Let's find the perfect places to satisfy your taste buds!`;
     
     this.conversationHistory.push({ role: 'assistant', content: response });
     return response;
+  }
+
+  async generateMissingParamPrompt(missingParams: string[], partialData: any): Promise<string> {
+    console.log('🤖 AI: Generating missing param prompt for:', missingParams);
+    
+    let prompt = `## 🔍 Almost there! I just need a few more details to plan your perfect trip!
+
+I'm excited to help you create an amazing travel experience! Let me gather the missing information:`;
+
+    // Show what we already know
+    if (partialData.source && partialData.destination) {
+      prompt += `\n\n📍 **Route:** ${partialData.source} → ${partialData.destination}`;
+    }
+    if (partialData.budget) {
+      prompt += `\n💰 **Budget:** ₹${partialData.budget.toLocaleString()}`;
+    }
+    if (partialData.members) {
+      prompt += `\n👥 **Travelers:** ${partialData.members}`;
+    }
+
+    prompt += `\n\n**Please tell me about:**\n`;
+
+    missingParams.forEach((param, index) => {
+      switch (param) {
+        case 'source':
+          prompt += `${index + 1}. 🚀 **Where are you traveling from?**\n`;
+          prompt += `   💡 *Examples:* "I'm in Chennai", "Leaving from Mumbai", "Currently in Delhi"\n`;
+          break;
+        case 'destination':
+          prompt += `${index + 1}. 🏖️ **Where do you want to go?**\n`;
+          prompt += `   💡 *Examples:* "I want to visit Dubai", "Going to London", "Planning to see Paris"\n`;
+          break;
+        case 'budget':
+          prompt += `${index + 1}. 💰 **What's your budget?**\n`;
+          prompt += `   💡 *Examples:* "₹50,000", "Around 1 lakh", "Budget is 75k", "About 100 thousand"\n`;
+          break;
+        case 'members':
+          prompt += `${index + 1}. 👥 **How many people are traveling?**\n`;
+          prompt += `   💡 *Examples:* "We are 4 people", "Family of 6", "Just me and my friend", "Group of 8"\n`;
+          break;
+      }
+    });
+
+    prompt += `\n\n🎯 **Quick tip:** You can tell me everything at once! For example:\n`;
+    prompt += `"*I want to go from Chennai to Dubai with 4 people and ₹50,000 budget*"\n\n`;
+    
+    prompt += `✨ **Or answer one by one** - I'm here to help make this easy for you!`;
+
+    return prompt;
   }
 }
 
