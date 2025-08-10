@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Bot, User, Plane, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Message {
   id: string;
@@ -20,6 +22,21 @@ interface MessageListProps {
 }
 
 export const MessageList = ({ messages, onActionClick }: MessageListProps) => {
+  const formatMessageContent = (content: string) => {
+    // Handle special formatting for travel-related content
+    if (content.includes('**') || content.includes('📍') || content.includes('🏖️') || content.includes('💰') || content.includes('👥')) {
+      return content;
+    }
+    
+    // Add basic formatting for regular messages
+    return content
+      .replace(/\n/g, '\n\n') // Double line breaks for better readability
+      .replace(/(\d+)/g, '**$1**') // Bold numbers
+      .replace(/(Chennai|Dubai|Mumbai|Delhi|Bangalore|London|Paris|New York|Tokyo|Singapore)/gi, '**$1**') // Bold city names
+      .replace(/(₹\d+)/g, '**$1**') // Bold currency amounts
+      .replace(/(\d+ people)/gi, '**$1**'); // Bold group sizes
+  };
+
   const renderMessage = (message: Message) => {
     const isUser = message.type === 'user';
     const isSystem = message.type === 'system';
@@ -53,7 +70,27 @@ export const MessageList = ({ messages, onActionClick }: MessageListProps) => {
           </Avatar>
           
           <Card className={`p-4 ${isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-            <p className="whitespace-pre-wrap">{message.content}</p>
+            <div className="prose-custom">
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  p: ({ children }) => <p className={`${isUser ? 'text-primary-foreground' : 'text-foreground'}`}>{children}</p>,
+                  strong: ({ children }) => <strong>{children}</strong>,
+                  em: ({ children }) => <em>{children}</em>,
+                  ul: ({ children }) => <ul>{children}</ul>,
+                  ol: ({ children }) => <ol>{children}</ol>,
+                  li: ({ children }) => <li>{children}</li>,
+                  h1: ({ children }) => <h1>{children}</h1>,
+                  h2: ({ children }) => <h2>{children}</h2>,
+                  h3: ({ children }) => <h3>{children}</h3>,
+                  code: ({ children }) => <code>{children}</code>,
+                  pre: ({ children }) => <pre>{children}</pre>,
+                  blockquote: ({ children }) => <blockquote>{children}</blockquote>,
+                }}
+              >
+                {formatMessageContent(message.content)}
+              </ReactMarkdown>
+            </div>
             <p className={`text-xs mt-2 ${isUser ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
               {format(message.timestamp, 'HH:mm')}
             </p>

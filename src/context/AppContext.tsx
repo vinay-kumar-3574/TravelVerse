@@ -43,10 +43,21 @@ interface Trip {
   status: 'planning' | 'booked' | 'active' | 'completed';
 }
 
+interface ChatSession {
+  id: string;
+  title: string;
+  lastMessage: string;
+  timestamp: Date;
+  tripId?: string;
+  messageCount: number;
+  isActive: boolean;
+}
+
 interface AppState {
   user: User | null;
   familyMembers: FamilyMember[];
   currentTrip: Trip | null;
+  chatSessions: ChatSession[];
   isLoading: boolean;
   error: string | null;
 }
@@ -58,6 +69,9 @@ type AppAction =
   | { type: 'ADD_FAMILY_MEMBER'; payload: FamilyMember }
   | { type: 'SET_CURRENT_TRIP'; payload: Trip }
   | { type: 'UPDATE_TRIP'; payload: Partial<Trip> }
+  | { type: 'ADD_CHAT_SESSION'; payload: ChatSession }
+  | { type: 'UPDATE_CHAT_SESSION'; payload: { id: string; updates: Partial<ChatSession> } }
+  | { type: 'SET_ACTIVE_CHAT'; payload: string }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'LOGOUT' };
@@ -66,6 +80,7 @@ const initialState: AppState = {
   user: null,
   familyMembers: [],
   currentTrip: null,
+  chatSessions: [],
   isLoading: false,
   error: null,
 };
@@ -123,6 +138,28 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
       return { 
         ...state, 
         currentTrip: state.currentTrip ? { ...state.currentTrip, ...action.payload } : null 
+      };
+    case 'ADD_CHAT_SESSION':
+      return { 
+        ...state, 
+        chatSessions: [...state.chatSessions, action.payload]
+      };
+    case 'UPDATE_CHAT_SESSION':
+      return {
+        ...state,
+        chatSessions: state.chatSessions.map(session =>
+          session.id === action.payload.id
+            ? { ...session, ...action.payload.updates }
+            : session
+        )
+      };
+    case 'SET_ACTIVE_CHAT':
+      return {
+        ...state,
+        chatSessions: state.chatSessions.map(session => ({
+          ...session,
+          isActive: session.id === action.payload
+        }))
       };
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };

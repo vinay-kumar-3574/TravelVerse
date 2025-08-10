@@ -34,27 +34,134 @@ class AIService {
 
   private generateTravelResponse(prompt: string, context?: any): string {
     const responses = [
-      "Based on your requirements, I've found some excellent travel options! Let me analyze your preferences and suggest the best routes.",
-      "Great choice of destination! I'll help you find the most suitable transportation and create a personalized itinerary.",
-      "I've processed your travel request and found several options that match your budget and preferences. Let me show you the best ones!",
+      `## ✈️ Travel Planning Complete!
+
+Based on your requirements, I've analyzed your travel preferences and found excellent options for your journey.
+
+**Key Highlights:**
+- 🎯 **Personalized Recommendations** based on your budget and preferences
+- 🚀 **Optimized Routes** for the best travel experience
+- 💰 **Budget-Friendly Options** that don't compromise on quality
+
+Let me show you the best transportation options and help you plan the perfect itinerary!`,
+      
+      `## 🌟 Excellent Travel Choice!
+
+I've processed your travel request and found several fantastic options that match your criteria perfectly.
+
+**What I Found:**
+- 🚄 **Multiple Transport Options** from budget to premium
+- 🏨 **Accommodation Suggestions** in prime locations
+- 📅 **Flexible Scheduling** to fit your timeline
+- 💡 **Local Insights** for an authentic experience
+
+Ready to explore your personalized travel options?`,
+      
+      `## 🎉 Travel Analysis Complete!
+
+Your travel preferences have been carefully analyzed, and I'm excited to share the results!
+
+**Analysis Summary:**
+- 📍 **Route Optimization** for the most efficient journey
+- 🎯 **Budget Allocation** across all travel components
+- 👥 **Group Accommodations** tailored to your party size
+- 🌍 **Local Recommendations** for authentic experiences
+
+Let's start building your perfect trip!`
     ];
     return responses[Math.floor(Math.random() * responses.length)];
   }
 
   private generateHotelResponse(prompt: string, context?: any): string {
     const responses = [
-      "I've found some amazing hotels that perfectly match your budget and group size. Each offers unique amenities for your comfort.",
-      "Based on your destination and preferences, here are my top hotel recommendations with excellent ratings and value for money.",
-      "These carefully selected accommodations offer the best combination of location, comfort, and price for your travel dates.",
+      `## 🏨 Hotel Recommendations Ready!
+
+I've found some amazing accommodations that perfectly match your preferences and budget.
+
+**Top Picks Include:**
+- 🌟 **Luxury Options** with premium amenities
+- 💰 **Budget-Friendly** choices with great value
+- 📍 **Prime Locations** close to major attractions
+- 🎯 **Family-Friendly** accommodations for group travel
+
+Each hotel has been carefully selected based on your specific requirements!`,
+      
+      `## 🎯 Perfect Hotel Matches!
+
+Based on your destination and preferences, here are my top hotel recommendations:
+
+**Selection Criteria:**
+- ⭐ **High Ratings** from verified guests
+- 💎 **Value for Money** within your budget range
+- 🚶 **Walkable Distance** to key attractions
+- 🍽️ **Dining Options** and local cuisine access
+
+Let me show you the details and help you make the best choice!`,
+      
+      `## 🏡 Accommodation Options Found!
+
+These carefully selected hotels offer the best combination of comfort, location, and value:
+
+**What Makes Them Special:**
+- 🎨 **Unique Character** and local charm
+- 🛏️ **Comfortable Rooms** with modern amenities
+- 🌅 **Great Views** and peaceful surroundings
+- 🚗 **Easy Access** to transportation hubs
+
+Ready to see the full details and book your stay?`
     ];
     return responses[Math.floor(Math.random() * responses.length)];
   }
 
   private generateBudgetResponse(prompt: string, context?: any): string {
     const responses = [
-      "I've analyzed your budget and created an optimized spending plan that covers all your travel needs while leaving room for unexpected experiences.",
-      "Your budget allocation looks great! I've distributed it across transportation, accommodation, meals, and activities for the best value.",
-      "Based on your budget, I can suggest several cost-effective options that don't compromise on quality or experience.",
+      `## 💰 Budget Analysis Complete!
+
+I've analyzed your budget and created an optimized spending plan that covers all your travel needs.
+
+**Budget Breakdown:**
+- 🚗 **Transportation:** 40% - Flights, trains, local transport
+- 🏨 **Accommodation:** 30% - Hotels, resorts, or rentals
+- 🍽️ **Food & Dining:** 20% - Local restaurants and cuisine
+- 🎯 **Activities:** 10% - Tours, attractions, experiences
+
+**Smart Tips:**
+- 💡 Book early for better rates
+- 🎯 Use local transport to save money
+- 🍽️ Try street food for authentic flavors
+- 📱 Use travel apps for discounts`,
+      
+      `## 💎 Budget Optimization Success!
+
+Your budget allocation looks excellent! I've distributed it strategically across all travel components.
+
+**Allocation Strategy:**
+- ✈️ **Air Travel:** Premium routes within budget
+- 🏨 **Lodging:** Comfortable stays in prime areas
+- 🚌 **Local Transport:** Efficient and cost-effective options
+- 🎭 **Experiences:** Must-see attractions included
+
+**Money-Saving Tips:**
+- 🕐 **Off-Peak Travel** for better rates
+- 🎫 **Combo Tickets** for multiple attractions
+- 🏪 **Local Markets** for authentic shopping
+- 🚶 **Walking Tours** for free exploration`,
+      
+      `## 🎯 Budget-Friendly Options Found!
+
+Based on your budget, I can suggest several cost-effective options that don't compromise on quality.
+
+**Value Propositions:**
+- 💰 **Affordable Luxury** within your price range
+- 🎯 **Strategic Timing** for best deals
+- 🌟 **Hidden Gems** that offer great value
+- 🚀 **Efficient Planning** to maximize your budget
+
+**Smart Spending:**
+- 📅 **Flexible Dates** for better rates
+- 🏨 **Alternative Areas** with great value
+- 🍽️ **Local Eateries** for authentic cuisine
+- 🎫 **Free Activities** in your destination`
     ];
     return responses[Math.floor(Math.random() * responses.length)];
   }
@@ -292,7 +399,65 @@ class AIService {
 
   async chatResponse(message: string, context?: any): Promise<string> {
     this.conversationHistory.push({ role: 'user', content: message });
-    const response = await this.mockOpenAICall(message, context);
+    
+    // Generate contextual responses based on message content
+    let response = '';
+    
+    if (message.toLowerCase().includes('hello') || message.toLowerCase().includes('hi')) {
+      response = `## 👋 Hello there!
+
+Welcome to **TravelVerse AI** - your intelligent travel companion! 
+
+**How can I help you today?**
+- ✈️ **Plan a trip** - Tell me your destination and preferences
+- 🏨 **Find accommodation** - Hotels, resorts, or unique stays
+- 🚗 **Transport options** - Flights, trains, buses, or car rentals
+- 💰 **Budget planning** - Optimize your travel spending
+- 🌍 **Local insights** - Discover hidden gems and authentic experiences
+
+Just describe what you're looking for, and I'll create a personalized travel plan for you!`;
+    } else if (message.toLowerCase().includes('weather') || message.toLowerCase().includes('climate')) {
+      response = `## 🌤️ Weather & Climate Information
+
+I'd be happy to help you with weather information for your destination!
+
+**What I can tell you:**
+- 🌡️ **Temperature ranges** for different seasons
+- ☔ **Rainfall patterns** and best time to visit
+- 🌞 **Sunny days** and ideal outdoor activity periods
+- 🧥 **Packing recommendations** based on weather
+
+**To get specific weather info, please tell me:**
+- 📍 **Destination city/country**
+- 📅 **Travel dates** (if you have them)
+- 🎯 **Activities** you're planning (beach, hiking, city tours, etc.)
+
+This will help me provide the most accurate and useful weather information for your trip!`;
+    } else if (message.toLowerCase().includes('food') || message.toLowerCase().includes('cuisine') || message.toLowerCase().includes('restaurant')) {
+      response = `## 🍽️ Local Cuisine & Dining Guide
+
+Great question! Local food is one of the best parts of traveling!
+
+**What I can help you discover:**
+- 🏆 **Must-try local dishes** and signature foods
+- 🍜 **Popular restaurants** from street food to fine dining
+- 🕐 **Best dining times** and local eating customs
+- 💰 **Price ranges** for different dining experiences
+- 🥘 **Dietary options** for various preferences
+
+**To give you the best recommendations, tell me:**
+- 🌍 **Your destination**
+- 👥 **Group size** and preferences
+- 💰 **Budget range** for meals
+- 🍽️ **Cuisine preferences** (spicy, vegetarian, etc.)
+- 🕐 **Meal times** you're interested in
+
+Let's find the perfect places to satisfy your taste buds!`;
+    } else {
+      // Use the existing response generation
+      response = await this.mockOpenAICall(message, context);
+    }
+    
     this.conversationHistory.push({ role: 'assistant', content: response });
     return response;
   }

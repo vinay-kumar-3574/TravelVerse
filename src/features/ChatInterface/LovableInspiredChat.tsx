@@ -8,6 +8,8 @@ import { useApp } from '@/context/AppContext';
 import { aiService } from '@/api/aiService';
 import { MessageAnimation, FloatingTravelIcons, PlaneAnimation } from '@/components/animations/GSAPAnimations';
 import { EnhancedSidebar } from './EnhancedSidebar';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Message {
   id: string;
@@ -20,11 +22,36 @@ interface Message {
 export const LovableInspiredChat = () => {
   const navigate = useNavigate();
   const { state, dispatch } = useApp();
+  const { chatSessions } = state;
+  const activeChat = chatSessions.find(session => session.isActive);
+  
+  // Debug logging for chat sessions
+  useEffect(() => {
+    console.log('LovableInspiredChat - Chat sessions:', chatSessions);
+    console.log('LovableInspiredChat - Active chat:', activeChat);
+  }, [chatSessions, activeChat]);
+  
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       type: 'ai',
-      content: "✈️ Welcome to TravelVerse AI! I'm your intelligent travel companion. Tell me about your dream destination, budget, and travel preferences - let's plan something amazing together!",
+      content: `## ✈️ Welcome to TravelVerse AI!
+
+I'm your **intelligent travel companion** - ready to help you plan the perfect trip!
+
+**What I can do for you:**
+- 🎯 **Plan complete trips** with personalized recommendations
+- ✈️ **Find the best transport** options for your budget
+- 🏨 **Discover amazing hotels** in prime locations
+- 💰 **Optimize your budget** across all travel components
+- 🌍 **Provide local insights** and hidden gems
+
+**Getting started is easy:**
+Just tell me about your dream destination, budget, and travel preferences. For example:
+
+*"Plan a trip for 4 people from Chennai to Dubai with ₹50,000 budget"*
+
+Let's create something amazing together! 🚀`,
       timestamp: new Date()
     }
   ]);
@@ -42,6 +69,27 @@ export const LovableInspiredChat = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Create default chat session if none exists and ensure sidebar updates
+  useEffect(() => {
+    if (chatSessions.length === 0) {
+      const defaultSession = {
+        id: Date.now().toString(),
+        title: 'New Travel Chat',
+        lastMessage: 'Welcome to TravelVerse AI!',
+        timestamp: new Date(),
+        messageCount: 1,
+        isActive: true
+      };
+      dispatch({ type: 'ADD_CHAT_SESSION', payload: defaultSession });
+    } else {
+      // Ensure we have an active chat
+      const hasActiveChat = chatSessions.some(session => session.isActive);
+      if (!hasActiveChat && chatSessions.length > 0) {
+        dispatch({ type: 'SET_ACTIVE_CHAT', payload: chatSessions[0].id });
+      }
+    }
+  }, [chatSessions.length, dispatch, chatSessions]);
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
@@ -56,29 +104,67 @@ export const LovableInspiredChat = () => {
     setInputValue('');
     setIsLoading(true);
 
+    // Update chat session with new message
+    if (activeChat) {
+      const currentMessageCount = activeChat.messageCount;
+      dispatch({
+        type: 'UPDATE_CHAT_SESSION',
+        payload: {
+          id: activeChat.id,
+          updates: {
+            lastMessage: inputValue,
+            timestamp: new Date(),
+            messageCount: currentMessageCount + 1
+          }
+        }
+      });
+    }
+
     try {
       // Parse the travel prompt
       const parsedData = await aiService.parseTravelPrompt(inputValue);
       
-      // If we have valid travel data, create a trip
-      if (parsedData.source && parsedData.destination) {
-        const newTrip = {
-          id: Date.now().toString(),
-          source: parsedData.source,
-          destination: parsedData.destination,
-          budget: parsedData.budget || 50000,
-          members: parsedData.members || 1,
-          departureDate: '',
-          returnDate: '',
-          status: 'planning' as const
-        };
-        dispatch({ type: 'SET_CURRENT_TRIP', payload: newTrip });
+              // If we have valid travel data, create a trip
+        if (parsedData.source && parsedData.destination) {
+          const newTrip = {
+            id: Date.now().toString(),
+            source: parsedData.source,
+            destination: parsedData.destination,
+            budget: parsedData.budget || 50000,
+            members: parsedData.members || 1,
+            departureDate: '',
+            returnDate: '',
+            status: 'planning' as const
+          };
+          dispatch({ type: 'SET_CURRENT_TRIP', payload: newTrip });
+
+          // Update chat session with trip info
+          if (activeChat) {
+            dispatch({
+              type: 'UPDATE_CHAT_SESSION',
+              payload: {
+                id: activeChat.id,
+                updates: {
+                  title: `Trip to ${parsedData.destination}`,
+                  tripId: newTrip.id
+                }
+              }
+            });
+          }
 
         // Show trip analysis message
         const analysisMessage: Message = {
           id: (Date.now() + 1).toString(),
           type: 'system',
-          content: `🎯 **Trip Analysis**\n📍 **From:** ${parsedData.source}\n🏖️ **To:** ${parsedData.destination}\n💰 **Budget:** ₹${parsedData.budget?.toLocaleString()}\n👥 **Travelers:** ${parsedData.members}`,
+          content: `## 🎯 Trip Analysis Complete!
+
+**Trip Details:**
+📍 **From:** ${parsedData.source}
+🏖️ **To:** ${parsedData.destination}
+💰 **Budget:** ₹${parsedData.budget?.toLocaleString()}
+👥 **Travelers:** ${parsedData.members}
+
+I've analyzed your preferences and found excellent options for your journey!`,
           timestamp: new Date(),
           data: parsedData
         };
@@ -94,6 +180,22 @@ export const LovableInspiredChat = () => {
         };
         setMessages(prev => [...prev, aiMessage]);
 
+        // Update chat session with AI response
+        if (activeChat) {
+          const currentMessageCount = activeChat.messageCount;
+          dispatch({
+            type: 'UPDATE_CHAT_SESSION',
+            payload: {
+              id: activeChat.id,
+              updates: {
+                lastMessage: aiResponse.substring(0, 50) + (aiResponse.length > 50 ? '...' : ''),
+                timestamp: new Date(),
+                messageCount: currentMessageCount + 3 // user + ai + system messages
+              }
+            }
+          });
+        }
+
         // Show action buttons
         setTimeout(() => {
           const actionMessage: Message = {
@@ -104,6 +206,22 @@ export const LovableInspiredChat = () => {
             data: { action: 'show_transport', trip: newTrip }
           };
           setMessages(prev => [...prev, actionMessage]);
+          
+          // Update chat session with system message
+          if (activeChat) {
+            const currentMessageCount = activeChat.messageCount;
+            dispatch({
+              type: 'UPDATE_CHAT_SESSION',
+              payload: {
+                id: activeChat.id,
+                updates: {
+                  lastMessage: 'Ready to explore your travel options?',
+                  timestamp: new Date(),
+                  messageCount: currentMessageCount + 4 // user + ai + system + action messages
+                }
+              }
+            });
+          }
         }, 1000);
 
       } else {
@@ -116,6 +234,22 @@ export const LovableInspiredChat = () => {
           timestamp: new Date()
         };
         setMessages(prev => [...prev, aiMessage]);
+        
+        // Update chat session with AI response
+        if (activeChat) {
+          const currentMessageCount = activeChat.messageCount;
+          dispatch({
+            type: 'UPDATE_CHAT_SESSION',
+            payload: {
+              id: activeChat.id,
+              updates: {
+                lastMessage: aiResponse.substring(0, 50) + (aiResponse.length > 50 ? '...' : ''),
+                timestamp: new Date(),
+                messageCount: currentMessageCount + 2 // user + ai messages
+              }
+            }
+          });
+        }
       }
     } catch (error) {
       console.error('Error processing message:', error);
@@ -148,6 +282,24 @@ export const LovableInspiredChat = () => {
         break;
       case 'show_dashboard':
         navigate('/dashboard');
+        break;
+      case 'new_chat':
+        const newSession = {
+          id: Date.now().toString(),
+          title: 'New Travel Chat',
+          lastMessage: 'New chat started',
+          timestamp: new Date(),
+          messageCount: 0,
+          isActive: true
+        };
+        dispatch({ type: 'ADD_CHAT_SESSION', payload: newSession });
+        dispatch({ type: 'SET_ACTIVE_CHAT', payload: newSession.id });
+        setMessages([{
+          id: '1',
+          type: 'ai',
+          content: "✈️ Welcome to TravelVerse AI! I'm your intelligent travel companion. Tell me about your dream destination, budget, and travel preferences - let's plan something amazing together!",
+          timestamp: new Date()
+        }]);
         break;
       default:
         console.log('Unknown action:', action);
@@ -202,8 +354,26 @@ export const LovableInspiredChat = () => {
                 ? 'bg-gradient-to-br from-primary to-primary/90 text-white border-primary/20' 
                 : 'bg-card/50 backdrop-blur-sm border-border/50'
             }`}>
-              <div className="prose prose-sm max-w-none">
-                <p className="whitespace-pre-wrap m-0 leading-relaxed">{message.content}</p>
+              <div className="prose-custom">
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    p: ({ children }) => <p className={`${isUser ? 'text-white' : 'text-foreground'}`}>{children}</p>,
+                    strong: ({ children }) => <strong>{children}</strong>,
+                    em: ({ children }) => <em>{children}</em>,
+                    ul: ({ children }) => <ul>{children}</ul>,
+                    ol: ({ children }) => <ol>{children}</ol>,
+                    li: ({ children }) => <li>{children}</li>,
+                    h1: ({ children }) => <h1>{children}</h1>,
+                    h2: ({ children }) => <h2>{children}</h2>,
+                    h3: ({ children }) => <h3>{children}</h3>,
+                    code: ({ children }) => <code>{children}</code>,
+                    pre: ({ children }) => <pre>{children}</pre>,
+                    blockquote: ({ children }) => <blockquote>{children}</blockquote>,
+                  }}
+                >
+                  {message.content}
+                </ReactMarkdown>
               </div>
               <div className={`text-xs mt-2 opacity-70 ${isUser ? 'text-white/70' : 'text-muted-foreground'}`}>
                 {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -248,15 +418,28 @@ export const LovableInspiredChat = () => {
                 </div>
                 <div>
                   <h1 className="text-lg font-semibold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                    TravelVerse AI
+                    {activeChat?.title || 'TravelVerse AI'}
                   </h1>
-                  <p className="text-xs text-muted-foreground">Your intelligent travel companion</p>
+                  <p className="text-xs text-muted-foreground">
+                    {activeChat ? `${activeChat.messageCount} messages` : 'Your intelligent travel companion'}
+                  </p>
                 </div>
               </div>
             </div>
-            <Button variant="ghost" size="icon" className="hover:bg-white/10">
-              <Settings className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => handleActionClick('new_chat')}
+                className="hover:bg-white/10 text-xs"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                New Chat
+              </Button>
+              <Button variant="ghost" size="icon" className="hover:bg-white/10">
+                <Settings className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
         </div>
 
