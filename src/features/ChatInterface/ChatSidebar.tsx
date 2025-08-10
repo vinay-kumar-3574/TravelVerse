@@ -40,7 +40,7 @@ export const ChatSidebar = () => {
   return (
     <div className="h-full flex flex-col bg-card border-r border-border">
       {/* User Profile */}
-      <div className="p-6 border-b border-border">
+      <div className="flex-shrink-0 p-6 border-b border-border">
         <div className="flex items-center space-x-3 mb-4">
           <Avatar className="w-12 h-12">
             {user?.profileImage ? (
@@ -94,7 +94,7 @@ export const ChatSidebar = () => {
       </div>
 
       {/* Chat History */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto min-h-0 p-4">
         <h4 className="text-sm font-medium text-muted-foreground mb-3">Recent Chats</h4>
         <div className="space-y-2">
           <Button variant="ghost" className="w-full justify-start text-left">
@@ -107,7 +107,7 @@ export const ChatSidebar = () => {
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-border space-y-2">
+      <div className="flex-shrink-0 p-4 border-t border-border space-y-2">
         <Button variant="ghost" className="w-full justify-start">
           <Settings className="w-4 h-4 mr-3" />
           Settings

@@ -236,13 +236,13 @@ export const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ isOpen, onTogg
         />
       )}
 
-      {/* Sidebar */}
-      <div className={`fixed left-0 top-0 h-full w-80 bg-card/80 backdrop-blur-md border-r border-border/50 z-50 transform transition-transform duration-300 sidebar-content ${
+            {/* Sidebar */}
+      <div className={`fixed left-0 top-0 h-full w-80 bg-card/80 backdrop-blur-md border-r border-border/50 z-50 transform transition-transform duration-300 sidebar-content flex flex-col ${
         isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}>
         
         {/* Header */}
-        <div className="p-4 border-b border-border/50">
+        <div className="flex-shrink-0 p-4 border-b border-border/50">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Avatar className="w-10 h-10">
@@ -267,7 +267,7 @@ export const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ isOpen, onTogg
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-border/50">
+        <div className="flex-shrink-0 flex border-b border-border/50">
           {[
             { id: 'chats', label: 'Chats', icon: Plus },
             { id: 'profile', label: 'Profile', icon: User },
@@ -289,14 +289,14 @@ export const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ isOpen, onTogg
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {activeTab === 'chats' && renderChats()}
           {activeTab === 'profile' && renderProfile()}
           {activeTab === 'settings' && renderSettings()}
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-border/50">
+        <div className="flex-shrink-0 p-4 border-t border-border/50">
           <Button className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90">
             <Plus className="w-4 h-4 mr-2" />
             New Trip
