@@ -60,27 +60,27 @@ const getProfile = asyncHandler(async (req, res) => {
 // Update user profile
 const updateProfile = asyncHandler(async (req, res) => {
   const { 
-    firstName, 
-    lastName, 
-    phone, 
+    fullName, 
+    contact, // Changed from phone to contact
     dateOfBirth, 
     preferences, 
     emergencyContact,
     preferredTravelMode,
     language,
-    nationality
+    nationality,
+    gender
   } = req.body;
   
   const updateData = {};
-  if (firstName) updateData.firstName = firstName;
-  if (lastName) updateData.lastName = lastName;
-  if (phone) updateData.phone = phone;
+  if (fullName) updateData.fullName = fullName;
+  if (contact) updateData.contact = contact; // Direct assignment, no mapping needed
   if (dateOfBirth) updateData.dateOfBirth = dateOfBirth;
   if (preferences) updateData.preferences = preferences;
   if (emergencyContact) updateData.emergencyContact = emergencyContact;
   if (preferredTravelMode) updateData.preferredTravelMode = preferredTravelMode;
   if (language) updateData.language = language;
   if (nationality) updateData.nationality = nationality;
+  if (gender) updateData.gender = gender;
 
   const user = await User.findByIdAndUpdate(
     req.user.id,
@@ -164,7 +164,7 @@ const deleteUser = asyncHandler(async (req, res) => {
 
 // Get family members
 const getFamilyMembers = asyncHandler(async (req, res) => {
-  const familyMembers = await FamilyMember.find({ userId: req.user.id });
+  const familyMembers = await FamilyMember.find({ userId: req.params.id });
   
   res.json({
     success: true,
@@ -176,7 +176,7 @@ const getFamilyMembers = asyncHandler(async (req, res) => {
 const addFamilyMember = asyncHandler(async (req, res) => {
   const familyMemberData = {
     ...req.body,
-    userId: req.user.id
+    userId: req.params.id
   };
 
   const familyMember = await FamilyMember.create(familyMemberData);
@@ -191,7 +191,7 @@ const addFamilyMember = asyncHandler(async (req, res) => {
 // Update family member
 const updateFamilyMember = asyncHandler(async (req, res) => {
   const familyMember = await FamilyMember.findOneAndUpdate(
-    { _id: req.params.memberId, userId: req.user.id },
+    { _id: req.params.memberId, userId: req.params.id },
     req.body,
     { new: true, runValidators: true }
   );
@@ -214,7 +214,7 @@ const updateFamilyMember = asyncHandler(async (req, res) => {
 const deleteFamilyMember = asyncHandler(async (req, res) => {
   const familyMember = await FamilyMember.findOneAndDelete({
     _id: req.params.memberId,
-    userId: req.user.id
+    userId: req.params.id
   });
 
   if (!familyMember) {

@@ -260,6 +260,24 @@ class RealApiService {
     });
   }
 
+  // Extended profile update method that matches the backend controller
+  async updateUserProfileExtended(profileData: {
+    fullName?: string; // Changed from firstName/lastName
+    contact?: string; // Changed from phone to contact
+    dateOfBirth?: string;
+    gender?: string;
+    nationality?: string;
+    language?: string;
+    preferredTravelMode?: string;
+    emergencyContact?: any;
+    preferences?: any;
+  }) {
+    return this.apiCall('/users/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+  }
+
   // Family Members APIs
   async getFamilyMembers() {
     return this.apiCall('/users/family-members');

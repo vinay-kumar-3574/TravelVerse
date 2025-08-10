@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { gsap } from 'gsap';
+import { EditProfile } from './EditProfile';
 
 interface EnhancedSidebarProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ isOpen, onTogg
   const { state } = useApp();
   const { user } = state;
   const [activeTab, setActiveTab] = useState<'chats' | 'profile' | 'settings'>('chats');
+  const [showEditProfile, setShowEditProfile] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -33,13 +35,13 @@ export const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ isOpen, onTogg
   }, [isOpen]);
 
   const userStats = {
-    tripsCompleted: 12,
-    countriesVisited: 8,
-    totalDistance: '45,670 km',
-    favoriteDestination: 'Dubai',
-    nextTrip: 'Thailand',
-    memberSince: '2023',
-    planningStreak: 15
+    tripsCompleted: 12, // This would come from user's trip history
+    countriesVisited: 8, // This would come from user's trip history
+    totalDistance: '45,670 km', // This would be calculated from trips
+    favoriteDestination: user?.preferences?.favoriteDestination || 'Not set',
+    nextTrip: 'Thailand', // This would come from upcoming trips
+    memberSince: '2024', // This would come from user creation date
+    planningStreak: 15 // This would be calculated from user activity
   };
 
   const recentChats = [
@@ -58,10 +60,21 @@ export const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ isOpen, onTogg
         </Avatar>
         <h3 className="font-semibold text-lg">{user?.fullName || 'Travel Enthusiast'}</h3>
         <p className="text-sm text-muted-foreground">{user?.email}</p>
-        <Badge variant="outline" className="mt-2">
-          <Award className="w-3 h-3 mr-1" />
-          Explorer Level
-        </Badge>
+        <div className="flex items-center justify-center space-x-2 mt-2">
+          <Badge variant="outline">
+            <Award className="w-3 h-3 mr-1" />
+            Explorer Level
+          </Badge>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowEditProfile(true)}
+            className="text-xs"
+          >
+            <User className="w-3 h-3 mr-1" />
+            Edit
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -162,7 +175,11 @@ export const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ isOpen, onTogg
       <div>
         <h4 className="font-semibold mb-3">Account</h4>
         <div className="space-y-2">
-          <Button variant="ghost" className="w-full justify-start">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start"
+            onClick={() => setShowEditProfile(true)}
+          >
             <User className="w-4 h-4 mr-2" />
             Edit Profile
           </Button>
@@ -286,6 +303,17 @@ export const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({ isOpen, onTogg
           </Button>
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      {showEditProfile && (
+        <EditProfile
+          onClose={() => setShowEditProfile(false)}
+          onProfileUpdated={() => {
+            // Profile was updated, you can add any additional logic here
+            setShowEditProfile(false);
+          }}
+        />
+      )}
     </>
   );
 };

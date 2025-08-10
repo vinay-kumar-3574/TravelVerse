@@ -14,6 +14,15 @@ interface User {
   travelDocuments: any;
   emergencyContact?: any;
   isOnboarded: boolean;
+  preferences?: {
+    budgetRange: {
+      min: number;
+      max: number;
+    };
+    travelStyle: 'budget' | 'comfort' | 'luxury';
+    interests: string[];
+    favoriteDestination?: string;
+  };
 }
 
 interface FamilyMember extends Omit<User, 'email' | 'isOnboarded'> {
@@ -43,6 +52,7 @@ interface AppState {
 
 type AppAction = 
   | { type: 'SET_USER'; payload: User }
+  | { type: 'UPDATE_USER'; payload: Partial<User> }
   | { type: 'SET_FAMILY_MEMBERS'; payload: FamilyMember[] }
   | { type: 'ADD_FAMILY_MEMBER'; payload: FamilyMember }
   | { type: 'SET_CURRENT_TRIP'; payload: Trip }
@@ -63,6 +73,8 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
   switch (action.type) {
     case 'SET_USER':
       return { ...state, user: action.payload };
+    case 'UPDATE_USER':
+      return { ...state, user: state.user ? { ...state.user, ...action.payload } : null };
     case 'SET_FAMILY_MEMBERS':
       return { ...state, familyMembers: action.payload };
     case 'ADD_FAMILY_MEMBER':
