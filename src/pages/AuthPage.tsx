@@ -8,9 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Mail, Lock, User, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { realApiService } from '@/api/realApiService';
+import { useApp } from '@/context/AppContext';
 
 const AuthPage = () => {
   const navigate = useNavigate();
+  const { dispatch } = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -53,6 +55,12 @@ const AuthPage = () => {
             if (response.data?.token) {
               localStorage.setItem('authToken', response.data.token);
             }
+            
+            // Store user data in context
+            if (response.data?.user) {
+              dispatch({ type: 'SET_USER', payload: response.data.user });
+            }
+            
             navigate('/onboarding');
           } else {
             setError(response.message || 'Signup failed');
@@ -76,6 +84,22 @@ const AuthPage = () => {
             if (response.data?.token) {
               localStorage.setItem('authToken', response.data.token);
             }
+            
+            // Store user data in context
+            if (response.data?.user) {
+              dispatch({ type: 'SET_USER', payload: response.data.user });
+            } else {
+              // If user data is not in login response, fetch it separately
+              try {
+                const userResponse = await realApiService.getUserProfile();
+                if (userResponse.success && userResponse.data) {
+                  dispatch({ type: 'SET_USER', payload: userResponse.data });
+                }
+              } catch (userError) {
+                console.error('Failed to fetch user profile:', userError);
+              }
+            }
+            
             navigate('/chat');
           } else {
             setError(response.message || 'Login failed');
